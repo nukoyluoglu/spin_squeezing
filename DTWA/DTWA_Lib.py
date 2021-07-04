@@ -147,6 +147,32 @@ def XXZderiv(vconfig, t, Jz_ij, Jperp_ij):
 
     return np.concatenate((dxdt,dydt,dzdt),0)
 
+def TFIderiv(vconfig, t, Jz_ij, h):
+    N = int(len(vconfig)/3)
+    x = vconfig[0:N]
+    y = vconfig[N:2*N]
+    z = vconfig[2*N:3*N]
+    betaz = (Jz_ij@z)
+    betax = h
+    dxdt = -y*betaz
+    dydt = (x*betaz) - (z*betax)
+    dzdt = y*betax
+
+    return np.concatenate((dxdt,dydt,dzdt),0)
+
+def CTderiv(vconfig, t, J_ij):
+    N = int(len(vconfig)/3)
+    x = vconfig[0:N]
+    y = vconfig[N:2*N]
+    z = vconfig[2*N:3*N]
+    betay = (-J_ij@y)
+    betaz = (J_ij@z)
+    dxdt = (z*betay) - (y*betaz)
+    dydt = x*betaz
+    dzdt = -x*betay
+
+    return np.concatenate((dxdt,dydt,dzdt),0)
+
 #### Generates evolution under XY Hamiltonian sum_ij (Jperp_ij/2)*(X_i X_j + Y_i Y_j) with generic power law interactions
 # Solution is computed by a numerical ODE solver
 # alpha = exponent of decay for interaction strength  J_ij ~ 1/|r_ij|^α
@@ -215,6 +241,48 @@ def XXZEvolve(initConfigs,tvec,Jz,Jperp,coord=[],Jfunc=[],alpha=[]):
     for i in range(initConfigs.shape[0]):
     #     print("i: %d" %i)
         currtraj = odeint(XXZderiv,config2vec(initConfigs[i,:,:]),tvec,args=(Jz_ij,Jperp_ij,))
+        trajectories.append(np.reshape(currtraj,(len(tvec),int(currtraj.shape[1]/3),3),order='F'))
+
+    config_evol = np.array(trajectories)  # nt x times x N x 3components
+    meanConfig_evol = np.mean(config_evol,axis=0)
+
+    return config_evol, meanConfig_evol
+
+def TFIEvolve(initConfigs,tvec,Jz,h,coord=[],Jfunc=[],alpha=[]):
+    trajectories = []
+    config_evol = []
+    meanConfig_evol = []
+
+    if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
+        # get J_ij INTERACTING MATRIX
+        J_ij = getJij(coord,Jz,alpha,Jfunc=Jfunc)
+    else:                                             # UNFIORM INTERACTIONS
+        J_ij = Jz*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+
+    for i in range(initConfigs.shape[0]):
+    #     print("i: %d" %i)
+        currtraj = odeint(TFIderiv,config2vec(initConfigs[i,:,:]),tvec,args=(J_ij,h))
+        trajectories.append(np.reshape(currtraj,(len(tvec),int(currtraj.shape[1]/3),3),order='F'))
+
+    config_evol = np.array(trajectories)  # nt x times x N x 3components
+    meanConfig_evol = np.mean(config_evol,axis=0)
+
+    return config_evol, meanConfig_evol
+
+def CTEvolve(initConfigs,tvec,J,coord=[],Jfunc=[],alpha=[]):
+    trajectories = []
+    config_evol = []
+    meanConfig_evol = []
+
+    if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
+        # get J_ij INTERACTING MATRIX
+        J_ij = getJij(coord,J,alpha,Jfunc=Jfunc)
+    else:                                             # UNFIORM INTERACTIONS
+        J_ij = J*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+
+    for i in range(initConfigs.shape[0]):
+    #     print("i: %d" %i)
+        currtraj = odeint(CTderiv,config2vec(initConfigs[i,:,:]),tvec,args=(J_ij,))
         trajectories.append(np.reshape(currtraj,(len(tvec),int(currtraj.shape[1]/3),3),order='F'))
 
     config_evol = np.array(trajectories)  # nt x times x N x 3components

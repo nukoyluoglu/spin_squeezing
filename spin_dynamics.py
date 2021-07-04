@@ -339,6 +339,22 @@ class SpinOperators_DTWA(object):
             return tdist
         return evolve
 
+    def get_TFI_Hamiltonian(self, Jz, h, alpha):
+        def evolve(configs, tvec):
+            # XXZ interaction for interacting spins (no double-counting)
+            tdist, meanConfig_evol = dtwa.TFIEvolve(configs,tvec,Jz,h,coord=self.coord,Jfunc=[],alpha=alpha)
+            tdist = np.swapaxes(tdist,0,1)
+            return tdist
+        return evolve
+
+    def get_CT_Hamiltonian(self, J, alpha):
+        def evolve(configs, tvec):
+            # XXZ interaction for interacting spins (no double-counting)
+            tdist, meanConfig_evol = dtwa.CTEvolve(configs,tvec,J,coord=self.coord,Jfunc=[],alpha=alpha)
+            tdist = np.swapaxes(tdist,0,1)
+            return tdist
+        return evolve
+
     def get_init_state(self, axis):
         return dtwa.genUniformConfigs(self.N,self.nt,axis=axis)
 

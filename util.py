@@ -125,44 +125,44 @@ def read_observed_t(filename):
 
 ### PLOTS
 
-def plot_variance_SN_vs_t(variance_SN, t, method, N, interaction_shape, interaction_param_name, interaction_range, dirname='.', J_eff=None):
+def plot_variance_SN_vs_t(variance_SN, t, method, N, interaction_shape, interaction_param_name, interaction_range, dirname='.', coupling=None, coupling_name='J_eff'):
 
     fig = plt.figure()
     title = '{}, N = {}, {}, {} = {}'.format(method, N, interaction_shape, interaction_param_name, interaction_range)
-    if J_eff is not None:
-        title += ', J_eff = {}'.format(J_eff)
+    if coupling is not None:
+        title += ', {} = {}'.format(coupling_name, coupling)
     plt.title(title)
 
-    xlabel = 'J * t' if J_eff is None else 'J_eff * t'
+    xlabel = 'J * t' if coupling is None or coupling_name != 'J_eff' else 'J_eff * t'
     plt.xlabel(xlabel)
 
     plt.ylabel('N * <S_a^2> / <S_x>^2')
     
     plt.ylim(bottom=0., top=1.)
 
-    Jt = t if J_eff is None else J_eff * t
+    Jt = t if coupling is None or coupling_name != 'J_eff' else coupling * t
     plt.plot(Jt, variance_SN)
 
     filename = 'variance_SN_vs_t_{}_N_{}_{}_{}_{}'.format(method, N, interaction_shape, interaction_param_name, interaction_range)
-    if J_eff is not None:
-        filename += '_J_eff_{}'.format(J_eff)
+    if coupling is not None:
+        filename += '_{}_{}'.format(coupling_name, coupling)
     plt.savefig('{}/{}.png'.format(dirname, filename))
     plt.close()
 
-def plot_variance_norm_vs_t(variance_norm, t, method, N, interaction_shape, interaction_param_name, interaction_range, variance_norm_perp=None, dirname='.', J_eff=None):
+def plot_variance_norm_vs_t(variance_norm, t, method, N, interaction_shape, interaction_param_name, interaction_range, variance_norm_perp=None, dirname='.', coupling=None, coupling_name='J_eff'):
 
     fig = plt.figure()
     title = '{}, N = {}, {}, {} = {}'.format(method, N, interaction_shape, interaction_param_name, interaction_range)
-    if J_eff is not None:
-        title += ', J_eff = {}'.format(J_eff)
+    if coupling is not None:
+        title += ', {} = {}'.format(coupling_name, coupling)
     plt.title(title)
 
-    xlabel = 'J * t' if J_eff is None else 'J_eff * t'
+    xlabel = 'J * t' if coupling is None or coupling_name != 'J_eff' else 'J_eff * t'
     plt.xlabel(xlabel)
 
     plt.ylabel('(normalized) <S_a^2>')
     
-    Jt = t if J_eff is None else J_eff * t
+    Jt = t if coupling is None or coupling_name != 'J_eff' else coupling * t
     plt.plot(Jt, variance_norm, color='blue', label='optimal angle')
     if variance_norm_perp is not None:
         plt.plot(Jt, variance_norm_perp, color='green', label='pi/2 away from optimal angle')
@@ -170,42 +170,42 @@ def plot_variance_norm_vs_t(variance_norm, t, method, N, interaction_shape, inte
     plt.legend()
 
     filename = 'variance_norm_vs_t_{}_N_{}_{}_{}_{}'.format(method, N, interaction_shape, interaction_param_name, interaction_range)
-    if J_eff is not None:
-        filename += '_J_eff_{}'.format(J_eff)
+    if coupling is not None:
+        filename += '_{}_{}'.format(coupling_name, coupling)
     plt.savefig('{}/{}.png'.format(dirname, filename))
     plt.close()
 
-def plot_angle_vs_t(angle, t, method, N, interaction_shape, interaction_param_name, interaction_range, dirname='.', J_eff=None):
+def plot_angle_vs_t(angle, t, method, N, interaction_shape, interaction_param_name, interaction_range, dirname='.', coupling=None, coupling_name='J_eff'):
 
     fig = plt.figure()
     title = '{}, N = {}, {}, {} = {}'.format(method, N, interaction_shape, interaction_param_name, interaction_range)
-    if J_eff is not None:
-        title += ', J_eff = {}'.format(J_eff)
+    if coupling is not None:
+        title += ', {} = {}'.format(coupling_name, coupling)
     plt.title(title)
 
-    xlabel = 'J * t' if J_eff is None else 'J_eff * t'
+    xlabel = 'J * t' if coupling is None or coupling_name != 'J_eff' else 'J_eff * t'
     plt.xlabel(xlabel)
 
     plt.ylabel('squeezing angle')
     
-    Jt = t if J_eff is None else J_eff * t
+    Jt = t if coupling is None or coupling_name != 'J_eff' else coupling * t
     plt.plot(Jt, angle)
 
     filename = 'angle_vs_t_{}_N_{}_{}_{}_{}'.format(method, N, interaction_shape, interaction_param_name, interaction_range)
-    if J_eff is not None:
-        filename += '_J_eff_{}'.format(J_eff)
+    if coupling is not None:
+        filename += '_{}_{}'.format(coupling_name, coupling)
     plt.savefig('{}/{}.png'.format(dirname, filename))
     plt.close()
 
-def plot_variance_SN_vs_t_all_ranges(variance_SN_vs_range_vs_method, t_vs_range_vs_method, N, interaction_shape, interaction_param_name, dirname='.', J_eff=None):
+def plot_variance_SN_vs_t_all_ranges(variance_SN_vs_range_vs_method, t_vs_range_vs_method, N, interaction_shape, interaction_param_name, dirname='.', coupling=None, coupling_name='J_eff'):
 
     fig = plt.figure(figsize=(7.2,4.8))
     title = 'N = {}, {}'.format(N, interaction_shape)
-    if J_eff is not None:
-        title += ', J_eff = {}'.format(J_eff)
+    if coupling is not None:
+        title += ', {} = {}'.format(coupling_name, coupling)
     plt.title(title)
 
-    xlabel = 'J * t' if J_eff is None else '|J_eff| * t'
+    xlabel = 'J * t' if coupling is None or coupling_name != 'J_eff' else '|J_eff| * t'
     plt.xlabel(xlabel)
 
     plt.ylabel('N * <S_a^2> / <S_x>^2')
@@ -223,7 +223,7 @@ def plot_variance_SN_vs_t_all_ranges(variance_SN_vs_range_vs_method, t_vs_range_
         else:
             color_scale = 'Greens'
         for i, (range, variance_SN) in zip(color_idx, variance_SN_vs_range.items()):
-            Jt = t_vs_range[range] if J_eff is None else np.abs(J_eff) * t_vs_range[range]
+            Jt = t_vs_range[range] if coupling is None or coupling_name != 'J_eff' else np.abs(coupling) * t_vs_range[range]
             plt.plot(Jt, variance_SN, color=plt.cm.get_cmap(color_scale)(i), label='{}, {} = {}'.format(method, interaction_param_name, range))
         range_list = list(variance_SN_vs_range.keys())
         norm = mpl.colors.Normalize(vmin=0, vmax=1) 
@@ -235,8 +235,8 @@ def plot_variance_SN_vs_t_all_ranges(variance_SN_vs_range_vs_method, t_vs_range_
     plt.legend()
         
     filename = 'variance_SN_vs_t_N_{}_{}_all_ranges'.format(N, interaction_shape)
-    if J_eff is not None:
-        filename += '_J_eff_{}'.format(J_eff)
+    if coupling is not None:
+        filename += '_{}_{}'.format(coupling_name, coupling)
     plt.savefig('{}/{}.png'.format(dirname, filename))
 
     plt.ylim(bottom=0.01, top=10)
@@ -244,8 +244,8 @@ def plot_variance_SN_vs_t_all_ranges(variance_SN_vs_range_vs_method, t_vs_range_
     plt.tight_layout()
 
     filename = 'variance_SN_log_vs_t_N_{}_{}_all_ranges'.format(N, interaction_shape)
-    if J_eff is not None:
-        filename += '_J_eff_{}'.format(J_eff)
+    if coupling is not None:
+        filename += '_{}_{}'.format(coupling_name, coupling)
     plt.savefig('{}/{}.png'.format(dirname, filename))
     plt.close()
 
