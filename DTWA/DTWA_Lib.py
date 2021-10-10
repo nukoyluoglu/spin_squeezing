@@ -67,16 +67,19 @@ def ladder2cart(config):
 # configs = initial configs in cartesian basis
 # returns ALL trajectories as well as the mean config at each time (i.e. mean trajectory) 
 # trajectory is a matrix of dimensions: num(times) x nt x N x 3 components where the nt is the number of trajectories each computed for num(times) time points
-def IsingEvolve(configs,tvec,Jz,coord=[],Jfunc=[],alpha=[]):
+def IsingEvolve(configs,tvec,Jz,coord=[],Jfunc=[],alpha=[],Jij=[]):
     lconfigs = cart2ladder(configs)
     z = lconfigs[:,:,2]
     
-    if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):         # ANISOTROPIC POWER LAW INTERACTIONS
-        # get J_ij INTERACTING MATRIX
-        Jz_ij = getJij(coord,Jz,alpha,Jfunc=Jfunc)
-    else:                                             # UNFIORM INTERACTIONS
-        Jz_ij = Jz*(np.ones((configs.shape[1],configs.shape[1])) - np.eye(configs.shape[1]))
-    
+    if list(Jij) == []:
+        if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):         # ANISOTROPIC POWER LAW INTERACTIONS
+            # get J_ij INTERACTING MATRIX
+            Jz_ij = getJij(coord,Jz,alpha,Jfunc=Jfunc)
+        else:                                             # UNFIORM INTERACTIONS
+            Jz_ij = Jz*(np.ones((configs.shape[1],configs.shape[1])) - np.eye(configs.shape[1]))
+    else:
+        Jz_ij = Jz*Jij
+
     config_evol = []
     meanConfig_evol = []
     for t in tvec:
@@ -178,16 +181,20 @@ def CTderiv(vconfig, t, J_ij):
 # alpha = exponent of decay for interaction strength  J_ij ~ 1/|r_ij|^α
 # coord = tuple of (x,y,z) coordinates of each spin
 # initConfigs = initial configs in cartesian basis
-def IsingEvolve_ODE(initConfigs,tvec,Jz,coord=[],Jfunc=[],alpha=[]):
+def IsingEvolve_ODE(initConfigs,tvec,Jz,coord=[],Jfunc=[],alpha=[],Jij=[]):
     trajectories = []
     config_evol = []
     meanConfig_evol = []
 
-    if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
-        # get J_ij INTERACTING MATRIX
-        J_ij = getJij(coord,Jz,alpha,Jfunc=Jfunc)
-    else:                                             # UNFIORM INTERACTIONS
-        J_ij = Jz*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+    if list(Jij) == []:
+        if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
+            # get J_ij INTERACTING MATRIX
+            J_ij = getJij(coord,Jz,alpha,Jfunc=Jfunc)
+        else:                                             # UNFIORM INTERACTIONS
+            J_ij = Jz*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+    else:
+        J_ij = Jz*Jij
+
 
     for i in range(initConfigs.shape[0]):
     #     print("i: %d" %i)
@@ -204,16 +211,20 @@ def IsingEvolve_ODE(initConfigs,tvec,Jz,coord=[],Jfunc=[],alpha=[]):
 # alpha = exponent of decay for interaction strength  J_ij ~ 1/|r_ij|^α
 # coord = tuple of (x,y,z) coordinates of each spin
 # initConfigs = initial configs in cartesian basis
-def XYEvolve(initConfigs,tvec,Jperp,coord=[],Jfunc=[],alpha=[]):
+def XYEvolve(initConfigs,tvec,Jperp,coord=[],Jfunc=[],alpha=[],Jij=[]):
     trajectories = []
     config_evol = []
     meanConfig_evol = []
 
-    if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
-        # get J_ij INTERACTING MATRIX
-        J_ij = getJij(coord,Jperp/2,alpha,Jfunc=Jfunc)
-    else:                                             # UNFIORM INTERACTIONS
-        J_ij = (Jperp/2)*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+    if list(Jij) == []:
+        if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
+            # get J_ij INTERACTING MATRIX
+            J_ij = getJij(coord,Jperp/2,alpha,Jfunc=Jfunc)
+        else:                                             # UNFIORM INTERACTIONS
+            J_ij = (Jperp/2)*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+    else:
+        J_ij = (Jperp/2)*Jij
+
     for i in range(initConfigs.shape[0]):
     #     print("i: %d" %i)
         currtraj = odeint(XYderiv,config2vec(initConfigs[i,:,:]),tvec,args=(J_ij,))
@@ -224,20 +235,29 @@ def XYEvolve(initConfigs,tvec,Jperp,coord=[],Jfunc=[],alpha=[]):
 
     return config_evol, meanConfig_evol
 
-def XXZEvolve(initConfigs,tvec,Jz,Jperp,coord=[],Jfunc=[],alpha=[]):
+def XXZEvolve(initConfigs,tvec,Jz,Jperp,coord=[],Jfunc=[],alpha=[],Jij=[]):
     trajectories = []
     config_evol = []
     meanConfig_evol = []
-    if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
-        # get J_ij INTERACTING MATRIX
-        Jperp_ij = getJij(coord,Jperp/2,alpha,Jfunc=Jfunc)
-    else:                                             # UNFIORM INTERACTIONS
-        Jperp_ij = (Jperp/2)*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
-    if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):         # ANISOTROPIC POWER LAW INTERACTIONS
-        # get J_ij INTERACTING MATRIX
-        Jz_ij = getJij(coord,Jz,alpha,Jfunc=Jfunc)
-    else:                                             # UNFIORM INTERACTIONS
-        Jz_ij = Jz*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+    
+    if list(Jij) == []:
+        if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
+            # get J_ij INTERACTING MATRIX
+            Jperp_ij = getJij(coord,Jperp/2,alpha,Jfunc=Jfunc)
+        else:                                             # UNFIORM INTERACTIONS
+            Jperp_ij = (Jperp/2)*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+    else:
+        Jperp_ij = (Jperp/2)*Jij
+
+    if list(Jij) == []:
+        if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):         # ANISOTROPIC POWER LAW INTERACTIONS
+            # get J_ij INTERACTING MATRIX
+            Jz_ij = getJij(coord,Jz,alpha,Jfunc=Jfunc)
+        else:                                             # UNFIORM INTERACTIONS
+            Jz_ij = Jz*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+    else:
+        Jz_ij = Jz*Jij
+
     for i in range(initConfigs.shape[0]):
     #     print("i: %d" %i)
         currtraj = odeint(XXZderiv,config2vec(initConfigs[i,:,:]),tvec,args=(Jz_ij,Jperp_ij,))
@@ -248,16 +268,19 @@ def XXZEvolve(initConfigs,tvec,Jz,Jperp,coord=[],Jfunc=[],alpha=[]):
 
     return config_evol, meanConfig_evol
 
-def TFIEvolve(initConfigs,tvec,Jz,h,coord=[],Jfunc=[],alpha=[]):
+def TFIEvolve(initConfigs,tvec,Jz,h,coord=[],Jfunc=[],alpha=[],Jij=[]):
     trajectories = []
     config_evol = []
     meanConfig_evol = []
 
-    if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
-        # get J_ij INTERACTING MATRIX
-        J_ij = getJij(coord,Jz,alpha,Jfunc=Jfunc)
-    else:                                             # UNFIORM INTERACTIONS
-        J_ij = Jz*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+    if list(Jij) == []:
+        if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
+            # get J_ij INTERACTING MATRIX
+            J_ij = getJij(coord,Jz,alpha,Jfunc=Jfunc)
+        else:   
+            J_ij = Jz*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+    else:
+        J_ij = Jz*Jij
 
     for i in range(initConfigs.shape[0]):
     #     print("i: %d" %i)
@@ -269,17 +292,19 @@ def TFIEvolve(initConfigs,tvec,Jz,h,coord=[],Jfunc=[],alpha=[]):
 
     return config_evol, meanConfig_evol
 
-def CTEvolve(initConfigs,tvec,J,coord=[],Jfunc=[],alpha=[]):
+def CTEvolve(initConfigs,tvec,J,coord=[],Jfunc=[],alpha=[],Jij=[]):
     trajectories = []
     config_evol = []
     meanConfig_evol = []
 
-    if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
-        # get J_ij INTERACTING MATRIX
-        J_ij = getJij(coord,J,alpha,Jfunc=Jfunc)
-    else:                                             # UNFIORM INTERACTIONS
-        J_ij = J*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
-
+    if list(Jij) == []:
+        if list(coord)!=[] and (Jfunc!=[] or alpha!=[]):  # ANISOTROPIC POWER LAW INTERACTIONS
+            # get J_ij INTERACTING MATRIX
+            J_ij = getJij(coord,J,alpha,Jfunc=Jfunc)
+        else:                                             # UNFIORM INTERACTIONS
+            J_ij = J*(np.ones((initConfigs.shape[1],initConfigs.shape[1])) - np.eye(initConfigs.shape[1]))
+    else:
+        J_ij = J*Jij
     for i in range(initConfigs.shape[0]):
     #     print("i: %d" %i)
         currtraj = odeint(CTderiv,config2vec(initConfigs[i,:,:]),tvec,args=(J_ij,))

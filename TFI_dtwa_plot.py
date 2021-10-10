@@ -5,7 +5,7 @@ import util
 
 if __name__ == '__main__':
     np.set_printoptions(threshold=np.inf)
-    structure, system_size, fill, interaction_shape, interaction_param_name, interaction_range_list, coupling, instance = setup.configure(specify_coupling=True)
+    structure, system_size, fill, interaction_shape, interaction_param_name, interaction_range_list, instance = setup.configure()
     
     dirname = 'TFI_dtwa'
 
@@ -15,9 +15,11 @@ if __name__ == '__main__':
     spin_system = sd.SpinOperators_DTWA(structure, system_size, fill)
     N = spin_system.N
     for interaction_range in interaction_range_list:
-        h_list = [coupling]
+        interaction_range = float(interaction_range)
+        Jz = -1.
+        h_list = np.concatenate(([N * Jz * 0.5], np.arange(-5,5.5,0.5)))
         for h in h_list:
-            filename = 'observables_vs_t_{}_N_{}_{}_{}_{}_h_{}'.format(method, N, interaction_shape, interaction_param_name, interaction_range, h)
+            filename = 'observables_vs_t_{}_N_{}_{}_{}_{}_Jz_{}_h_{}'.format(method, N, interaction_shape, interaction_param_name, interaction_range, Jz, h)
             observed_t = util.read_observed_t('{}/{}'.format(dirname, filename))
 
             variance_SN_t, variance_norm_t, angle_t, t = observed_t['min_variance_SN'], observed_t['min_variance_norm'], observed_t['opt_angle'], observed_t['t']

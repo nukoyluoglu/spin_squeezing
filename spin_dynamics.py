@@ -113,6 +113,49 @@ class SpinEvolution(object):
             t += t_op[-1]
         return (psi_t, observed_t, tvec) if (store_states and (observables is not None)) else (psi_t, tvec) if store_states else (observed_t, tvec) if (observables is not None) else tvec
 
+    def trotter_evolve_vary(self, angles, t_it, observables=None, store_states=False, discretize_time=True):
+        # S_y (instantanteous +/- pi/2 rotation) will not count towards evolution
+        H_1, H_2 = self.H 
+        psi = self.psi_0
+        if store_states: 
+            psi_t = np.array([psi])
+        if observables is not None:
+            observed_t = {}
+            store_observables(observables, observed_t, [psi], t_it=[0])             
+        t = 0
+        tvec = [t]
+        for it in range(len(angles)):
+            t_op = angles[it] * t_it
+
+            if it % 2 == 0:
+                psi_it = op_evolve(psi, H_1, t_op)
+            else:
+                psi_it = op_evolve(psi, H_2, t_op)
+            psi_temp = psi_it[-1]
+            # Rotation about y axis (Sy)
+            if it % 2 == 0:
+                # rotate about y axis by +pi/2
+                psi = op_evolve(psi_temp, self.B, np.pi/2 * t_it)[-1]
+            else:
+                # rotate about y axis by -pi/2
+                psi = op_evolve(psi_temp, self.B, -np.pi/2 * t_it)[-1]
+            psi_it[-1] = psi
+
+            if not discretize_time:
+                if store_states:
+                    psi_t = np.concatenate((psi_t, psi_it))
+                if observables is not None:
+                    store_observables(observables, observed_t, psi_it, t_it=t_op)
+                tvec = np.concatenate((tvec, t_op + t))
+            elif it % 2 == 1:
+                if store_states:
+                    psi_t = np.concatenate((psi_t, [psi]))
+                if observables is not None:
+                    store_observables(observables, observed_t, [psi], t_it=t_op[-1:])
+                tvec = np.concatenate((tvec, t_op[-1:] + t))
+            t += t_op[-1]
+        return (psi_t, observed_t, tvec) if (store_states and (observables is not None)) else (psi_t, tvec) if store_states else (observed_t, tvec) if (observables is not None) else tvec
+    
     def trotter_evolve_twice(self, angles, t_it, observables=None, store_states=False, discretize_time=True):
         # S_x and S_y (instantanteous +/- pi/2 rotation) will not count towards evolution
         H_z, H_perp = self.H 
@@ -154,6 +197,39 @@ class SpinEvolution(object):
                     store_observables(observables, observed_t, psi_it, t_it=t_op)
                 tvec = np.concatenate((tvec, t_op + t))
             elif it % 3 == 2:
+                if store_states:
+                    psi_t = np.concatenate((psi_t, [psi]))
+                if observables is not None:
+                    store_observables(observables, observed_t, [psi], t_it=t_op[-1:])
+                tvec = np.concatenate((tvec, t_op[-1:] + t))
+            t += t_op[-1]
+        return (psi_t, observed_t, tvec) if (store_states and (observables is not None)) else (psi_t, tvec) if store_states else (observed_t, tvec) if (observables is not None) else tvec
+
+    def trotter_evolve_direct(self, angles, t_it, observables=None, store_states=False, discretize_time=True):
+        psi = self.psi_0
+        if store_states: 
+            psi_t = np.array([psi])
+        if observables is not None:
+            observed_t = {}
+            store_observables(observables, observed_t, [psi], t_it=[0])
+        t = 0
+        tvec = [t]
+        for it in range(len(angles)):
+            t_op = angles[it] * t_it
+
+            if it % 2 == 0:
+                psi_it = op_evolve(psi, self.H, t_op)
+            else:
+                psi_it = op_evolve(psi, self.B, t_op)
+            psi = psi_it[-1]
+
+            if not discretize_time:
+                if store_states:
+                    psi_t = np.concatenate((psi_t, psi_it))
+                if observables is not None:
+                    store_observables(observables, observed_t, psi_it, t_it=t_op)
+                tvec = np.concatenate((tvec, t_op + t))
+            elif it % 2 == 1:
                 if store_states:
                     psi_t = np.concatenate((psi_t, [psi]))
                 if observables is not None:
@@ -311,17 +387,26 @@ class SpinOperators_Symmetry(object):
         return min_variance_SN_t, min_variance_norm_t, opt_angle_t
 
 class SpinOperators_DTWA(object):
-    # supports only 1-D spin chain, power law interactions for now
 
-    def __init__(self, structure, system_size, fill):
+    def __init__(self, structure, system_size, fill, coord=[]):
         self.N = system_size[0] * system_size[1]
-        self.coord = dtwa_util.getLatticeCoord(1,self.N,1)
+        if list(coord) == []:
+            if system_size[0] == 1 or system_size[1] == 1:
+                print('1D')
+                self.coord = dtwa_util.getLatticeCoord(1,self.N,1)
+            elif system_size[0] == system_size[1]:
+                print('2D')
+                self.coord = dtwa_util.getLatticeCoord(2,system_size[0],1)
+            else:
+                raise Exception('Invalid system size! System size must be 1 x L, L x 1, or L X L.')
+        else:
+            self.coord = coord
         self.nt =  10**4  # number of init conditions = number of trajectories
 
-    def get_Ising_Hamiltonian(self, J, alpha):
+    def get_Ising_Hamiltonian(self, J, alpha, Jij=[]):
         def evolve(configs, tvec):
             # Ising interaction for interacting spins (no double-counting)
-            tdist, meanConfig_evol = dtwa.IsingEvolve(configs,tvec,J,coord=self.coord,Jfunc=[],alpha=alpha)
+            tdist, meanConfig_evol = dtwa.IsingEvolve(configs,tvec,J,coord=self.coord,Jfunc=[],alpha=alpha,Jij=Jij)
             return tdist
         return evolve
     
@@ -331,28 +416,45 @@ class SpinOperators_DTWA(object):
             return tdist
         return evolve
 
-    def get_XXZ_Hamiltonian(self, Jz, Jperp, alpha):
+    def get_XXZ_Hamiltonian(self, Jz, Jperp, alpha, Jij=[]):
         def evolve(configs, tvec):
             # XXZ interaction for interacting spins (no double-counting)
-            tdist, meanConfig_evol = dtwa.XXZEvolve(configs,tvec,Jz,Jperp,coord=self.coord,Jfunc=[],alpha=alpha)
+            tvec = np.concatenate(([0], tvec))
+            tdist, meanConfig_evol = dtwa.XXZEvolve(configs,tvec,Jz,Jperp,coord=self.coord,Jfunc=[],alpha=alpha,Jij=Jij)
             tdist = np.swapaxes(tdist,0,1)
-            return tdist
+            return tdist[1:]
         return evolve
 
-    def get_TFI_Hamiltonian(self, Jz, h, alpha):
+    def get_XY_Hamiltonian(self, Jperp, alpha, Jij=[]):
         def evolve(configs, tvec):
-            # XXZ interaction for interacting spins (no double-counting)
-            tdist, meanConfig_evol = dtwa.TFIEvolve(configs,tvec,Jz,h,coord=self.coord,Jfunc=[],alpha=alpha)
+            tvec = np.concatenate(([0], tvec))
+            tdist, meanConfig_evol = dtwa.XYEvolve(configs,tvec,Jperp,coord=self.coord,Jfunc=[],alpha=alpha,Jij=Jij)
             tdist = np.swapaxes(tdist,0,1)
-            return tdist
+            return tdist[1:]
+        return evolve
+    
+    def get_TFI_Hamiltonian(self, Jz, h, alpha, Jij=[]):
+        def evolve(configs, tvec):
+            tvec = np.concatenate(([0], tvec))
+            tdist, meanConfig_evol = dtwa.TFIEvolve(configs,tvec,Jz,h,coord=self.coord,Jfunc=[],alpha=alpha,Jij=Jij)
+            tdist = np.swapaxes(tdist,0,1)
+            return tdist[1:]
         return evolve
 
-    def get_CT_Hamiltonian(self, J, alpha):
+    def get_CT_Hamiltonian(self, J, alpha, Jij=[]):
         def evolve(configs, tvec):
-            # XXZ interaction for interacting spins (no double-counting)
-            tdist, meanConfig_evol = dtwa.CTEvolve(configs,tvec,J,coord=self.coord,Jfunc=[],alpha=alpha)
+            tvec = np.concatenate(([0], tvec))
+            tdist, meanConfig_evol = dtwa.CTEvolve(configs,tvec,J,coord=self.coord,Jfunc=[],alpha=alpha,Jij=Jij)
             tdist = np.swapaxes(tdist,0,1)
-            return tdist
+            return tdist[1:]
+        return evolve
+
+    def get_CTv2_Hamiltonian(self, J, alpha, Jij=[]):
+        def evolve(configs, tvec):
+            tvec = np.concatenate(([0], tvec))
+            tdist, meanConfig_evol = dtwa.CTv2Evolve(configs,tvec,J,coord=self.coord,Jfunc=[],alpha=alpha,Jij=Jij)
+            tdist = np.swapaxes(tdist,0,1)
+            return tdist[1:]
         return evolve
 
     def get_init_state(self, axis):

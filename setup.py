@@ -28,7 +28,7 @@ def initialize_experiment(structure, system_size, fill, interaction_shape, inter
         setup.turn_on_interactions(interaction_fn(interaction_range))
     return setup
 
-def configure(specify_range=False, specify_coupling=False):
+def configure(specify_range=False, specify_coupling=False, specify_trotter=False):
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--structure", default='square', help="System structure (options: square, triangular, free)")
     parser.add_argument("-n", "--size", help="System size (options: integer N or integers L_x, L_y, depending on structure)", nargs='+', type=int)
@@ -38,7 +38,9 @@ def configure(specify_range=False, specify_coupling=False):
     if specify_range:
         parser.add_argument("-r", "--range", default=1., help="Interaction range", type=float)
     if specify_coupling:
-        parser.add_argument("-c", "--coupling", default=1., help="J_z - J_perp (coupling)", type=float)
+        parser.add_argument("-c", "--coupling", default=1., help="J_z - J_perp (coupling), or h (transverse field strength), by context", type=float)
+    if specify_trotter:
+        parser.add_argument("-a", "--trotter", default=1., help="Number of troterrization steps", type=int)
     args = parser.parse_args()
     
     structure = args.structure
@@ -62,12 +64,12 @@ def configure(specify_range=False, specify_coupling=False):
     i = args.instance
     
     if specify_range:
-        interaction_range = args.range
+        interaction_range = args.range / 2.
     else:
         if interaction_shape == 'random':
             interaction_range_list = ['N/A']
         elif interaction_shape == 'power_law':
-            interaction_range_list = [0, 0.5, 1, 1.5, 2, 2.5, 3]
+            interaction_range_list = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6]
         else:
             assert isinstance(system_size, (list, tuple, np.ndarray))
             interaction_range_list = np.arange(1.0, util.euclidean_dist_2D((0.0, 0.0), (system_size[0] * experiment.LATTICE_SPACING, system_size[1] * experiment.LATTICE_SPACING)), experiment.LATTICE_SPACING)
@@ -75,6 +77,9 @@ def configure(specify_range=False, specify_coupling=False):
     if specify_coupling:
         coupling = args.coupling
     
+    if specify_trotter:
+        n_trotter_steps = args.trotter
+
     configuration = [structure, system_size, fill, interaction_shape, interaction_param_name]
     
     if specify_range:
@@ -85,5 +90,8 @@ def configure(specify_range=False, specify_coupling=False):
     if specify_coupling:
         configuration.append(coupling)
     
+    if specify_trotter:
+        configuration.append(n_trotter_steps)
+        
     configuration.append(i)
     return configuration
